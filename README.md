@@ -1,6 +1,9 @@
 EDHREC is a reddit bot that provides recommendations for edh decks.
 It is built using Python. It uses PRAW to interact with Reddit.
 It stores data in Redis.
+It uses an approach called Collaborative Filtering to get the recommendations.
+
+DISCLAIMER: THIS CODE WILL POST TO REDDIT LIVE. PLEASE DON'T SPAM PEOPLE UNLESS YOU KNOW WHAT YOU ARE DOING.
 
 Original author: /u/orangeoctopus
 
