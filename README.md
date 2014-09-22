@@ -5,7 +5,13 @@ It uses an approach called Collaborative Filtering to get the recommendations.
 
 DISCLAIMER: THIS CODE WILL POST TO REDDIT LIVE. PLEASE DON'T SPAM PEOPLE UNLESS YOU KNOW WHAT YOU ARE DOING.
 
-Original author: /u/orangeoctopus
+Original author: /u/orangeoctopus Donald Miner
+
+This code is licensed under The MIT License, which basically allows you to do whatever you want with it
+as long as you keep the original copyright around. I picked this license because I wanted to be flexible
+and encourage people to play with the code.
+
+ Copyright 2014 Donald Miner 
 
 
 Installation instructions
