@@ -31,7 +31,7 @@ def load_cards_from_json(file_path):
 
 load_cards_from_json('AllCards.json')
 
-for deck in open('decks.json').readlines():
+for deck in open('decks_sample.json').readlines():
     core.add_deck(json.loads(deck))
 
 for cc in [ core.sanitize_cardname(c) for c in open('banlist.txt').read().strip().split('\n') ]:
