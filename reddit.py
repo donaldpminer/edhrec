@@ -6,7 +6,7 @@ import time
 import traceback
 import datetime
 
-TESTING = True
+TESTING = False
 
 PRAW = praw.Reddit(user_agent=core.USER_AGENT)
 PRAW.login(*open('login.txt').read().strip().split())
@@ -34,7 +34,7 @@ def find_tappedout_url(submission):
         return str(url.group(1))
 
 def linkify(cn):
-    return '[%s](http://gatherer.wizards.com/Handlers/Image.ashx?name=%s&type=card&.jpg)' % (cn, cn)
+    return '[%s](http://gatherer.wizards.com/Handlers/Image.ashx?name=%s&type=card&.jpg)' % (core.cap_cardname(cn), cn)
 
 # Go through recent submissions and try to find something I haven't seen before.
 # If there is something, post the recommendations. This is the default behavior
