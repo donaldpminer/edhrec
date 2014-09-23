@@ -6,7 +6,7 @@ import time
 import traceback
 import datetime
 
-TESTING = False
+TESTING = True
 
 PRAW = praw.Reddit(user_agent=core.USER_AGENT)
 PRAW.login(*open('login.txt').read().strip().split())
