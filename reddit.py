@@ -12,7 +12,7 @@ PRAW = praw.Reddit(user_agent=core.USER_AGENT)
 PRAW.login(*open('login.txt').read().strip().split())
 
 BOT_NOTICE = """
-\n\nI'm a bot - visit me in /r/edhrec"""
+\n\nI'm a bot - visit me in /r/edhrec - [**Help me fix formatting on mobile and win 1000 Puca Points**](http://www.reddit.com/r/edhrec/comments/2h6nix/help_me_fix_formatting_on_mobile/)"""
 
 # The universal easy sleep command
 def sleep(t=5.0, x=1.0):
@@ -110,7 +110,7 @@ def seek_submissions(sublimit=200):
 
         # build the output string
         if str(submission.subreddit).lower() in ['edhrec', 'edh']:
-            out_str = ['Creatures | Non-creatures | Lands | Unique in your deck\n:--------|:---------|:---------|:--------']
+            out_str = ['Other decks like yours use:\n\nCreatures | Non-creatures | Lands | Unique in your deck\n:--------|:---------|:---------|:--------']
 
             for i in range(16):
                 try:
