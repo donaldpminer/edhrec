@@ -8,6 +8,10 @@ import random
 import urllib2
 import HTMLParser
 
+# this keeps all the code that is shared amongst most of the mdoules and future modules
+# it mostly contains redis storage and the recommendation engine stuff
+
+
 # This is the redis configurations.
 # Note: 6379 is the default Redis port, so if you have any other apps
 #  hitting against redis, you might want to stand up your own.
@@ -19,6 +23,7 @@ logging.getLogger().setLevel(logging.DEBUG)
 # A global variable that pools a Redis connection.
 _REDIS = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=2)
 
+# this is what the scraper will post places
 USER_AGENT = "reddit.com/r/edh recommender by /u/orangeoctopus v2.0"
 
 
@@ -55,6 +60,7 @@ def sanitize_cardname(cn):
 def cap_cardname(cn):
     return cn.strip().lower().title().replace("'S", "'s").replace(' The', ' the').replace(' Of', ' of')
 
+# looks up the cardname cn in the redis data store. It turns a nice dictionary object that maps the json object.
 def lookup_card(cn):
     try:
         card_obj = json.loads(get_redis().hget('CARDS_JSON', sanitize_cardname(cn)))
@@ -64,6 +70,7 @@ def lookup_card(cn):
 
     return card_obj
 
+# figures out the color identitify for a particular card
 def color_identity(cn):
     card = lookup_card(cn)
 
@@ -81,11 +88,14 @@ def color_identity(cn):
 
     return sorted(list(oc))
 
+# returns true if the card is banned
 def is_banned(cn):
     return get_redis().sismember('BANNED', sanitize_cardname(cn))
 
+# adds a deck to the redis data store
 def add_deck(deck_dict):
     try:
+        # prepare the name of the key in redis (it's DECKS_ followed by sorted colors in the color identity, all caps)
         color_str = 'DECKS_' + '_'.join(color_identity(deck_dict['commander']))
     except ValueError:
         logging.warn("This commander doesn't exist, not adding it to my corpus: " + deck_dict['commander'])
@@ -93,8 +103,10 @@ def add_deck(deck_dict):
 
     logging.debug('Adding the deck with the commander ' + deck_dict['commander'])
 
+    # add it to the beginning of the list
     get_redis().lpush(color_str, json.dumps(deck_dict))
 
+# Returns all of the decks for a particular color. Turn dedup on if you want to remove dups
 def get_decks(colors, dedup=False):
     color_str = 'DECKS_' + '_'.join(sorted(c.upper() for c in colors))
 
@@ -112,6 +124,11 @@ def urlopen(url):
     # The cache is stored in Redis
     r = get_redis()
 
+    # TODO: I liked how I did caching before. Here I keep everything
+    #  in one key, URL_CACHE. Unfortunately, I can't set expirations per
+    #  key in a hash, I can only expire top-level keys. This makes it so
+    #  you have to flush the cache manually
+
     if r.hexists('URL_CACHE', url):
         logging.debug("Cache hit on " + url)
         return r.hget('URL_CACHE', url)
@@ -125,6 +142,7 @@ def urlopen(url):
 
     return con
 
+# flushes the entire cache
 def flush_cache():
     get_redis().delete('URL_CACHE')
 
@@ -189,7 +207,7 @@ def decks_are_dups(deck1, deck2, threshold = .7):
     else:
         return False
 
-
+# For a list of decks, deduplicate ones that are near duplicates of others in the list
 def dedup_decks(decks, threshold = .7):
     sdecks = sorted( decks, key= lambda x: int(x['date']), reverse=True )
 
@@ -211,6 +229,7 @@ def dedup_decks(decks, threshold = .7):
 # The optional parameter k tells you how far out to cast your net
 #    for similar decks. Smaller numbers will have more variance and bias,
 #    but larger numbers will degenrate into "goodstuff.dec" for those particular colors.
+# See "Collaborative Filtering" on the Google. This approach is based on that.
 def recommend(deck, k=15):
     nn = datetime.datetime.now()
     logging.debug("Finding recommendations for deck with general " + str(deck['commander']))
@@ -222,7 +241,8 @@ def recommend(deck, k=15):
             logging.debug("The deck submitted here is a duplicate of another deck in my corpus...")
             continue
 
-        d = rec_deck_closeness(deck, deck2) ** 2
+        d = rec_deck_closeness(deck, deck2) ** 2  # notice that I square the score.
+                # squaring the score makes closer decks weighted higher. I found empirically this gives better results.
 
         # Keep the score around but also keep the cards that were different.
         scores.append((d, deck2, set(deck2['cards']) - set(deck['cards']), set(deck['cards']) - set(deck2['cards'])))
@@ -247,7 +267,7 @@ def recommend(deck, k=15):
             if not nc in card_counts:
                 card_counts[nc] = 0.0
 
-            card_counts[nc] += ( dist / total_score)
+            card_counts[nc] += ( dist / total_score )  # dist / total score is what gives weight. 
 
         for uc in uniqcards:
             if uc == deck['commander']:
@@ -256,7 +276,7 @@ def recommend(deck, k=15):
             if not uc in uniq_counts:
                 uniq_counts[uc] = 0.0
 
-            uniq_counts[uc] += ( dist / total_score)
+            uniq_counts[uc] += ( dist / total_score )
 
     # Get ordered lists of card counts
     newrecs = sorted(card_counts.items(), key=lambda x:x[1], reverse=True)

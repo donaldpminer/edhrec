@@ -87,12 +87,13 @@ def seek_submissions(sublimit=200):
         for card, score in newrecs:
             # filter out basic lands from being recommendations
             if card in ['swamp', 'island', 'plains', 'mountain', 'forest']:
-                continue
+                continue # there is an annoying thing that happens when people use snow-covered basics
+                     # where edhrec will post basic lands as a recommendation. this prevents that
 
             if score < .3:
                 continue
 
-            score = int(score * 100)
+            score = int(score * 100) # make score easier to read
 
             try:
                 types = core.lookup_card(card)['types']

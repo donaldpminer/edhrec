@@ -5,11 +5,18 @@ import datetime
 import re
 import HTMLParser
 
+# This file contains the scraper code for tappedout.net
+# Note that there is no official api for tappedout and this is straight up scraping HTML...
+#           it may get ugly. hold on.
+
+# Hypothetically if we want to add another source than tappedout, all that is used by reddit.py
+#  is URL_PATTERN and get_deck. So, future scraper modules should expose these methods and then
+#  we'll add them to some sort of list in reddit.py.
+
 URL_PATTERN = re.compile('.*(http://tappedout.net/mtg-decks/[a-z0-9-]+).*')
 
-
 # Given a tappedout URL, get me the tuple:
-#    (commander, deck contents (a set), color identity, the date the deck was updated)
+#    (commander, deck contents (cards), color identity, the date the deck was updated)
 def get_deck(url):
     try:
         # I tack on /?fmt=txt because it gives th list of cards in a somewhat nice
@@ -108,14 +115,14 @@ def get_tappedout_info(url, assume_now = True):
 
     colors = sorted(list(colors))
 
-    # override if we have a good commander
+    # override pie colors if we have a good commander
     if cmdr is not None:
         try:
             colors = core.color_identity(cmdr)
         except ValueError:
             logging.warn('I have a commander that I don\'t think should exist')
             cmdr = None
-            # this will happen if the commander is one that tappedout sees but is not in allcards.json
+            # this will happen if the commander is one that tappedout sees but is not in allcards.json (i.e. if it is new)
             pass
 
     # GET DATE
