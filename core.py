@@ -103,8 +103,14 @@ def add_deck(deck_dict):
 
     logging.debug('Adding the deck with the commander ' + deck_dict['commander'])
 
-    # add it to the beginning of the list
-    get_redis().lpush(color_str, json.dumps(deck_dict))
+    # check to see if this exact deck exists already:
+    for deck in get_decks(color_identity(deck_dict['commander'])):
+        if deck['cards'] == deck_dict['cards']:
+            logging.debug('this deck is an exact dup. I\'m not going to add it at all.')
+            break
+    else:
+        # add it to the beginning of the list
+        get_redis().lpush(color_str, json.dumps(deck_dict))
 
 # Returns all of the decks for a particular color. Turn dedup on if you want to remove dups
 def get_decks(colors, dedup=False):

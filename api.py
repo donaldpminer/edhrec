@@ -4,19 +4,25 @@ import core
 import tappedout
 import datetime
 
-class HelloWorld(object):
+class API(object):
+    _cp_config = {'tools.staticdir.on' : True,
+                  'tools.staticdir.dir' : '/home/ubuntu/edhrec-site',
+                  'tools.staticdir.index' : 'index.html',
+    }
+
+
     @cherrypy.expose
     def rec(self, to=None, ref=None):
         ip = cherrypy.request.remote.ip
 
         r = core.get_redis()
 
-        cherrypy.response.headers["Access-Control-Allow-Origin"] = "*"
+        #cherrypy.response.headers["Access-Control-Allow-Origin"] = "*"
 
-        if r.exists('api' + str(ip)):
-            return json.dumps('Too many API calls. Try again in a few seconds.')
+        #if r.exists('api' + str(ip)):
+        #    return json.dumps('Too many API calls. Try again in a few seconds.')
  
-        r.set('api' + str(ip), '', ex=5)
+        #r.set('api' + str(ip), '', ex=5)
 
 	if tappedout is None:
             return json.dumps(None)
@@ -37,7 +43,7 @@ class HelloWorld(object):
         else:
             deck['ref'] = 'non-ref api call'
 
-        deck['date'] = str(datetime.datetime.now())
+        deck['scrapedate'] = str(datetime.datetime.now())
 
         core.add_deck(deck)
 
@@ -46,9 +52,16 @@ class HelloWorld(object):
 
 cherrypy.config.update({'server.socket_host': '172.30.0.88',
                         'server.socket_port': 80,
-                       })
+                        'environment': 'production'                      
+ })
 
-cherrypy.quickstart(HelloWorld())
+
+cherrypy.tree.mount(API(), '/')
+cherrypy.engine.start()
+
+cherrypy.engine.block()
+
+#cherrypy.quickstart(HelloWorld())
 
 
 

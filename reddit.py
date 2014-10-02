@@ -158,7 +158,7 @@ def seek_submissions(sublimit=200):
 
         deck['ref'] = 'reddit bot'
         deck['url'] = url
-        deck['date'] = str(datetime.datetime.now())
+        deck['scrapedate'] = str(datetime.datetime.now())
 
         # Keep track of the fact that I've now processed this deck.
         # It is important that this is last in case the scraping fails and
