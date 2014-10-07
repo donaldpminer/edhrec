@@ -32,6 +32,11 @@ class API(object):
 
         deck = tappedout.get_deck(to)
 
+        hashkey = 'CACHE_REC_' + core.hash_pyobj([deck['cards']] + [deck['commander']])
+        
+        if r.exists(hashkey):
+            return r.get(hashkey)
+
         newrecs, outrecs = core.recommend(deck)
 
         newrecs = [ { 'cardname' : cn, 'score' : sc, 'card_info' : core.lookup_card(cn)} for cn, sc in newrecs if sc > .3 ]
@@ -48,7 +53,11 @@ class API(object):
 
         core.add_deck(deck)
 
-        return json.dumps({'url' : to, 'recs' : newrecs, 'cuts' : outrecs})
+        output_json = json.dumps({'url' : to, 'recs' : newrecs, 'cuts' : outrecs})
+
+        r.set(hashkey, output_json, ex=60*60*24*3) # 3 days expiration
+
+        return output_json
 
     @cherrypy.expose
     def cmdr(self, commander):

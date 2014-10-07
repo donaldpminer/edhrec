@@ -7,6 +7,8 @@ import itertools
 import random
 import urllib2
 import HTMLParser
+import hashlib
+
 
 # this keeps all the code that is shared amongst most of the mdoules and future modules
 # it mostly contains redis storage and the recommendation engine stuff
@@ -43,6 +45,10 @@ def get_redis():
         _REDIS = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=2)
 
     return _REDIS
+
+
+def hash_pyobj(python_obj):
+    return hashlib.sha256(json.dumps(python_obj)).hexdigest()
 
 # Nasty hack of a function that removes all the characters that annoy me in
 #    magic cards.
