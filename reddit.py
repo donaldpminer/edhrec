@@ -12,7 +12,9 @@ PRAW = praw.Reddit(user_agent=core.USER_AGENT)
 PRAW.login(*open('login.txt').read().strip().split())
 
 BOT_NOTICE = """
-\n\nI'm a bot - visit me in /r/edhrec - [**Help me fix formatting on mobile and win 1000 Puca Points**](http://www.reddit.com/r/edhrec/comments/2h6nix/help_me_fix_formatting_on_mobile/)"""
+\n\nI'm a bot - visit me in /r/edhrec or [edhrec.com](http://edhrec.com)"""
+
+
 
 # The universal easy sleep command
 def sleep(t=5.0, x=1.0):
@@ -139,6 +141,7 @@ def seek_submissions(sublimit=200):
 
                 out_str.append('%s | %s | %s | %s' % (c, n , l, u))
 
+            out_str.append('\n\n[This deck on edhrec.com](http://edhrec.com/#/recommendations?q=' + url + ')')
 
             out_str.append(BOT_NOTICE)
 

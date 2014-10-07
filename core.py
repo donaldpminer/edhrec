@@ -81,9 +81,9 @@ def color_identity(cn):
     oc = set()
 
     for colorsig in colors:
-        if card.has_key('manaCost') and colorsig in card['manaCost']:
+        if card.has_key('manaCost') and colorsig in card['manaCost'].replace('/', '}{'):
             oc.add(colors[colorsig])
-        elif card.has_key('text') and colorsig in ' '.join(card['text'].replace(')', '(').split('(')[::2]):
+        elif card.has_key('text') and colorsig in ' '.join(card['text'].replace(')', '(').split('(')[::2]).replace('/', '}{'):
             oc.add(colors[colorsig])
 
     return sorted(list(oc))
@@ -113,7 +113,7 @@ def add_deck(deck_dict):
         get_redis().lpush(color_str, json.dumps(deck_dict))
 
 # Returns all of the decks for a particular color. Turn dedup on if you want to remove dups
-def get_decks(colors, dedup=False):
+def get_decks(colors, dedup=True):
     color_str = 'DECKS_' + '_'.join(sorted(c.upper() for c in colors))
 
     logging.debug('Retrieving all decks from ' + color_str)
@@ -208,7 +208,7 @@ def decks_are_dups(deck1, deck2, threshold = .7):
     in_common = len(set(deck1['cards']).intersection(set(deck2['cards'])))
 
     if in_common / avg_size > threshold:
-        print avg_size, in_common
+        #print avg_size, in_common
         return True
     else:
         return False
@@ -226,7 +226,7 @@ def dedup_decks(decks, threshold = .7):
             badlist.append(i2)
             continue
 
-    for k in badlist: print k, '!!!'
+    #for k in badlist: print k, '!!!'
 
     return [ d for i, d in enumerate(sdecks) if i not in badlist ]
 

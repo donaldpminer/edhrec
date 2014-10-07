@@ -8,6 +8,7 @@ class API(object):
     _cp_config = {'tools.staticdir.on' : True,
                   'tools.staticdir.dir' : '/home/ubuntu/edhrec-site',
                   'tools.staticdir.index' : 'index.html',
+                  '/favicon.ico' : { 'tools.staticfile.on' : True, 'tools.staticfile.filename' : '/home/ubuntu/edhrec-site/favicon.ico' }
     }
 
 
@@ -17,12 +18,12 @@ class API(object):
 
         r = core.get_redis()
 
-        #cherrypy.response.headers["Access-Control-Allow-Origin"] = "*"
+        cherrypy.response.headers["Access-Control-Allow-Origin"] = "*"
 
-        #if r.exists('api' + str(ip)):
-        #    return json.dumps('Too many API calls. Try again in a few seconds.')
+        if r.exists('api' + str(ip)):
+            return json.dumps('Too many API calls. Try again in a few seconds.')
  
-        #r.set('api' + str(ip), '', ex=5)
+        r.set('api' + str(ip), '', ex=1)
 
 	if tappedout is None:
             return json.dumps(None)
@@ -48,6 +49,46 @@ class API(object):
         core.add_deck(deck)
 
         return json.dumps({'url' : to, 'recs' : newrecs, 'cuts' : outrecs})
+
+    @cherrypy.expose
+    def cmdr(self, commander):
+        cherrypy.response.headers['Access-Control-Allow-Origin'] = "*"
+
+        r = core.get_redis()
+
+        ckey = 'CACHE_COMMANDER_' + commander.replace(' ', '_')
+        if r.exists(ckey):
+            return r.get(ckey)
+
+        commander = core.sanitize_cardname(commander)
+
+        colors = core.color_identity(commander)
+
+        decks = [ deck for deck in core.get_decks(colors) if deck['commander'] == commander]
+
+        out = {}
+        out['numdecks'] = len(decks)
+
+        cards = {}
+        for deck in decks:
+            for card in deck['cards']:
+
+                cards[card] = {'count' : 0, 'cardname' : card, 'card_info' : core.lookup_card(card)}
+
+        for deck in decks:
+            for card in deck['cards']:
+                if card == commander: continue
+                if card in ['swamp', 'island', 'mountain', 'forest', 'plains']: continue
+
+                cards[card]['count'] += 1
+
+        out['recs'] = [ pp for pp in sorted(cards.values(), key = (lambda x: -1 * x['count'])) if pp['count'] > 1 and pp['count'] > .1 * len(decks) ]
+
+        out['commander'] = commander
+
+        r.set(ckey, json.dumps(out), ex=60*60*24*7) # 7 day cache
+
+        return json.dumps(out)
 
 
 cherrypy.config.update({'server.socket_host': '172.30.0.88',
