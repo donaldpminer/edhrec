@@ -3,6 +3,27 @@ import json
 import core
 import tappedout
 import datetime
+import logging
+
+logging.basicConfig(filename='api.log')
+
+COMMANDERS = sorted( core.sanitize_cardname(cn.decode('utf-8').strip().lower()) for cn in open('commanders.txt').readlines() )
+
+def closest_commander(partial_name):
+    pn = core.sanitize_cardname(partial_name)
+
+    for cn in COMMANDERS:
+        if pn == cn:
+            return cn
+
+    for cn in COMMANDERS:
+        if cn.startswith(pn):
+            return cn
+
+    for cn in COMMANDERS:
+        if pn in cn:
+            return cn
+
 
 class API(object):
     _cp_config = {'tools.staticdir.on' : True,
@@ -14,6 +35,14 @@ class API(object):
 
     @cherrypy.expose
     def rec(self, to=None, ref=None):
+        to = to[:500]
+        ref = to[:20]
+
+        if not 'tappedout.net/mtg-decks' in to:
+            raise ValueError('invalid deck url %s . it should look like http://tappedout.net/mtg-decks/xxxx' % to)
+
+
+
         ip = cherrypy.request.remote.ip
 
         r = core.get_redis()
@@ -21,6 +50,7 @@ class API(object):
         cherrypy.response.headers["Access-Control-Allow-Origin"] = "*"
 
         if r.exists('api' + str(ip)):
+            logging.warn('%s ip is overloading' % str(ip))
             return json.dumps('Too many API calls. Try again in a few seconds.')
  
         r.set('api' + str(ip), '', ex=1)
@@ -31,6 +61,11 @@ class API(object):
 
 
         deck = tappedout.get_deck(to)
+
+
+        core.add_recent(to, \
+                    core.cap_cardname(deck['commander']))
+
 
         hashkey = 'CACHE_REC_' + core.hash_pyobj([deck['cards']] + [deck['commander']])
         
@@ -49,6 +84,12 @@ class API(object):
         else:
             deck['ref'] = 'non-ref api call'
 
+        deck['ip'] = str(ip)
+        try:
+            deck['headref'] = cherrypy.request.headerMap['Referer']
+        except AttributeError:
+            pass
+
         deck['scrapedate'] = str(datetime.datetime.now())
 
         core.add_deck(deck)
@@ -57,10 +98,13 @@ class API(object):
 
         r.set(hashkey, output_json, ex=60*60*24*3) # 3 days expiration
 
+
         return output_json
 
     @cherrypy.expose
     def cmdr(self, commander):
+        commander = commander[:50]
+
         cherrypy.response.headers['Access-Control-Allow-Origin'] = "*"
 
         r = core.get_redis()
@@ -70,6 +114,8 @@ class API(object):
             return r.get(ckey)
 
         commander = core.sanitize_cardname(commander)
+
+        commander = closest_commander(commander)
 
         colors = core.color_identity(commander)
 
@@ -93,11 +139,17 @@ class API(object):
 
         out['recs'] = [ pp for pp in sorted(cards.values(), key = (lambda x: -1 * x['count'])) if pp['count'] > 1 and pp['count'] > .1 * len(decks) ]
 
-        out['commander'] = commander
+        out['commander'] = core.cap_cardname(commander)
 
         r.set(ckey, json.dumps(out), ex=60*60*24*7) # 7 day cache
 
         return json.dumps(out)
+
+    @cherrypy.expose
+    def recent(self):
+        cherrypy.response.headers['Access-Control-Allow-Origin'] = "*"
+
+        return core.get_recent_json()
 
 
 cherrypy.config.update({'server.socket_host': '172.30.0.88',

@@ -163,6 +163,8 @@ def seek_submissions(sublimit=200):
         deck['url'] = url
         deck['scrapedate'] = str(datetime.datetime.now())
 
+        core.add_recent(url, core.cap_cardname(deck['commander']), submission.url)
+
         # Keep track of the fact that I've now processed this deck.
         # It is important that this is last in case the scraping fails and
         #   the problem is later fixed.
