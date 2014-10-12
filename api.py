@@ -62,6 +62,9 @@ class API(object):
 
         deck = tappedout.get_deck(to)
 
+        if deck['commander'] == 'jedit ojanen':
+            raise ValueError('You input a deck without a valid commander. Please go back and add it to the web interface.')
+
 
         core.add_recent(to, \
                     core.cap_cardname(deck['commander']))
@@ -151,6 +154,41 @@ class API(object):
 
         return core.get_recent_json()
 
+    @cherrypy.expose
+    def stats(self):
+        cherrypy.response.headers['Access-Control-Allow-Origin'] = "*"
+
+        r = core.get_redis()
+
+        ckey = 'CACHE_STATS'
+        if r.exists(ckey):
+            return r.get(ckey)
+
+
+        out = {}
+ 
+        m_counts = {}
+        for d in core.get_all_decks():
+            if not d.has_key('scrapedate'): continue
+            if (datetime.datetime.now() - core.date_from_str(d['scrapedate'])).days <= 30:
+                m_counts.setdefault(core.cap_cardname(d['commander']), 0)
+
+            m_counts[core.cap_cardname(d['commander'])] += 1
+
+        out['topmonth'] = sorted(m_counts.items(), key= lambda x: x[1], reverse=True)[:25]
+
+        alltime_counts = {}
+        for d in core.get_all_decks():
+            alltime_counts.setdefault(core.cap_cardname(d['commander']), 0)
+ 
+            alltime_counts[core.cap_cardname(d['commander'])] += 1
+
+        out['topalltime'] = sorted(alltime_counts.items(), key= lambda x: x[1], reverse=True)[:75]
+
+        out['deckcount'] = len(core.get_all_decks())
+
+        r.set(ckey, json.dumps(out), ex=60*60*3) # 3 hour cache
+        return json.dumps(out)
 
 cherrypy.config.update({'server.socket_host': '172.30.0.88',
                         'server.socket_port': 80,

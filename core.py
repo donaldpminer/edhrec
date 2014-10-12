@@ -8,7 +8,7 @@ import random
 import urllib2
 import HTMLParser
 import hashlib
-
+import re
 
 # this keeps all the code that is shared amongst most of the mdoules and future modules
 # it mostly contains redis storage and the recommendation engine stuff
@@ -62,6 +62,9 @@ def strip_accents(s):
 def sanitize_cardname(cn):
     return HTMLParser.HTMLParser().unescape(strip_accents(cn.strip().lower()))
 
+def date_from_str(dstr):
+    return datetime.datetime(*[ int(p) for p in re.split('[ \.:-]', dstr)[:-1]])
+
 # Undoes most of what sanitize_cardname does. This is used for presentation purposes.
 def cap_cardname(cn):
     return cn.strip().lower().title().replace("'S", "'s").replace(' The', ' the').replace(' Of', ' of')
@@ -109,6 +112,10 @@ def add_deck(deck_dict):
 
     logging.debug('Adding the deck with the commander ' + deck_dict['commander'])
 
+    if deck['commander'] == 'jedit ojanen':
+        logging.warn('jedit ojanen means someone submitted a deck without a commander. Im not going to add it')
+        return
+
     # check to see if this exact deck exists already:
     for deck in get_decks(color_identity(deck_dict['commander'])):
         if deck['cards'] == deck_dict['cards']:
@@ -119,8 +126,11 @@ def add_deck(deck_dict):
         get_redis().lpush(color_str, json.dumps(deck_dict))
 
 # Returns all of the decks for a particular color. Turn dedup on if you want to remove dups
-def get_decks(colors, dedup=True):
-    color_str = 'DECKS_' + '_'.join(sorted(c.upper() for c in colors))
+def get_decks(colors, dedup=False):
+    if type(colors) is str:
+        color_str = colors
+    else:
+        color_str = 'DECKS_' + '_'.join(sorted(c.upper() for c in colors))
 
     logging.debug('Retrieving all decks from ' + color_str)
 
@@ -130,6 +140,21 @@ def get_decks(colors, dedup=True):
         out = dedup_decks(out)
 
     return out
+
+def get_all_decks(dedup=False):
+    deck_strs = get_redis().keys('DECKS_*')
+
+    logging.debug('Retrieving ALLLL decks')
+
+    out = []
+    for ds in deck_strs:
+        decks = [ json.loads(d) for d in get_redis().lrange(ds, 0, -1) ]
+        if dedup:
+            decks = dedup_decks(decks)
+        out.extend(decks)
+       
+    return out
+
 
 # This function wraps a URL get request with a cache.
 def urlopen(url):
@@ -159,6 +184,24 @@ def flush_cache():
     get_redis().delete('URL_CACHE')
 
 
+def add_recent(url_ref, commander, reddit_ref = None):
+    r = get_redis()
+
+    out = {'url' : url_ref.strip('/'), 'commander' : commander}
+
+    if reddit_ref is not None:
+        out['reddit'] = reddit_ref
+
+    s = json.dumps(out)
+
+    r.lrem('RECENT', s, 0)
+
+    r.lpush('RECENT', s) 
+
+    r.ltrim('RECENT', 0, 99)
+
+def get_recent_json():
+    return json.dumps(get_redis().lrange('RECENT', 0, -1))
 
 
 
@@ -207,6 +250,14 @@ def rec_deck_closeness(deck1, deck2):
 # You can adjust it to be more aggressive by making threshold higher.
 # Threshold is the number of cards the two decks have in common. 
 def decks_are_dups(deck1, deck2, threshold = .7):
+    if deck1['commander'] != deck2['commander']:
+        return False
+
+    try:
+        if deck1['url'] == deck2['url']:
+            return True
+    except KeyError:
+        pass
 
     # Find out if the difference in number of cards is < threshold. If it is, it's a dup.
     avg_size = (len(deck1['cards']) + len(deck2['cards'])) / 2.0
