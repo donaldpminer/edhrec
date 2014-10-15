@@ -1,9 +1,12 @@
+#!/usr/bin/env python
+
 import cherrypy
 import json
 import core
 import tappedout
 import datetime
 import logging
+import deckstats
 
 logging.basicConfig(filename='api.log')
 
@@ -38,16 +41,15 @@ class API(object):
         to = to[:500]
         ref = to[:20]
 
+        cherrypy.response.headers["Access-Control-Allow-Origin"] = "*"
+
         if not 'tappedout.net/mtg-decks' in to:
             raise ValueError('invalid deck url %s . it should look like http://tappedout.net/mtg-decks/xxxx' % to)
-
-
 
         ip = cherrypy.request.remote.ip
 
         r = core.get_redis()
 
-        cherrypy.response.headers["Access-Control-Allow-Origin"] = "*"
 
         if r.exists('api' + str(ip)):
             logging.warn('%s ip is overloading' % str(ip))
@@ -75,7 +77,7 @@ class API(object):
         if r.exists(hashkey):
             return r.get(hashkey)
 
-        newrecs, outrecs = core.recommend(deck)
+        newrecs, outrecs, topk = core.recommend(deck, returnk=True)
 
         newrecs = [ { 'cardname' : cn, 'score' : sc, 'card_info' : core.lookup_card(cn)} for cn, sc in newrecs if sc > .3 ]
         outrecs = [ { 'cardname' : cn, 'score' : sc, 'card_info' : core.lookup_card(cn)} for cn, sc in outrecs if sc > .5 ]
@@ -97,7 +99,12 @@ class API(object):
 
         core.add_deck(deck)
 
-        output_json = json.dumps({'url' : to, 'recs' : newrecs, 'cuts' : outrecs})
+        stats = deckstats.tally([deck])
+        kstats = deckstats.tally(topk)
+        cstats = deckstats.get_commander_stats(deck['commander'])
+
+        output_json = json.dumps({'url' : to, 'recs' : newrecs, 'cuts' : outrecs, \
+                                  'stats' : stats, 'kstats' : kstats, 'cstats' : cstats})
 
         r.set(hashkey, output_json, ex=60*60*24*3) # 3 days expiration
 
@@ -112,13 +119,15 @@ class API(object):
 
         r = core.get_redis()
 
-        ckey = 'CACHE_COMMANDER_' + commander.replace(' ', '_')
-        if r.exists(ckey):
-            return r.get(ckey)
-
         commander = core.sanitize_cardname(commander)
 
         commander = closest_commander(commander)
+
+        r = core.get_redis()
+
+        ckey = 'CACHE_COMMANDER_' + commander.replace(' ', '_')
+        if r.exists(ckey):
+            return r.get(ckey)
 
         colors = core.color_identity(commander)
 
@@ -144,7 +153,9 @@ class API(object):
 
         out['commander'] = core.cap_cardname(commander)
 
-        r.set(ckey, json.dumps(out), ex=60*60*24*7) # 7 day cache
+        out['stats'] = deckstats.get_commander_stats(commander)
+
+        r.set(ckey, json.dumps(out), ex=60*60*24*2) # 2 day cache
 
         return json.dumps(out)
 
@@ -167,14 +178,21 @@ class API(object):
 
         out = {}
  
+        w_counts = {}
         m_counts = {}
         for d in core.get_all_decks():
             if not d.has_key('scrapedate'): continue
-            if (datetime.datetime.now() - core.date_from_str(d['scrapedate'])).days <= 30:
+
+            datedelta = (datetime.datetime.now() - core.date_from_str(d['scrapedate'])).days
+
+            if datedelta <= 30:
                 m_counts.setdefault(core.cap_cardname(d['commander']), 0)
+                m_counts[core.cap_cardname(d['commander'])] += 1
+            if datedelta <= 7:
+                w_counts.setdefault(core.cap_cardname(d['commander']), 0)
+                w_counts[core.cap_cardname(d['commander'])] += 1
 
-            m_counts[core.cap_cardname(d['commander'])] += 1
-
+        out['topweek'] = sorted(w_counts.items(), key= lambda x: x[1], reverse=True)[:25]
         out['topmonth'] = sorted(m_counts.items(), key= lambda x: x[1], reverse=True)[:25]
 
         alltime_counts = {}
@@ -183,7 +201,7 @@ class API(object):
  
             alltime_counts[core.cap_cardname(d['commander'])] += 1
 
-        out['topalltime'] = sorted(alltime_counts.items(), key= lambda x: x[1], reverse=True)[:75]
+        out['topalltime'] = sorted(alltime_counts.items(), key= lambda x: x[1], reverse=True)[:25]
 
         out['deckcount'] = len(core.get_all_decks())
 

@@ -112,7 +112,7 @@ def add_deck(deck_dict):
 
     logging.debug('Adding the deck with the commander ' + deck_dict['commander'])
 
-    if deck['commander'] == 'jedit ojanen':
+    if deck_dict['commander'] == 'jedit ojanen':
         logging.warn('jedit ojanen means someone submitted a deck without a commander. Im not going to add it')
         return
 
@@ -293,7 +293,7 @@ def dedup_decks(decks, threshold = .7):
 #    for similar decks. Smaller numbers will have more variance and bias,
 #    but larger numbers will degenrate into "goodstuff.dec" for those particular colors.
 # See "Collaborative Filtering" on the Google. This approach is based on that.
-def recommend(deck, k=15):
+def recommend(deck, k=15, returnk=False):
     nn = datetime.datetime.now()
     logging.debug("Finding recommendations for deck with general " + str(deck['commander']))
 
@@ -347,5 +347,8 @@ def recommend(deck, k=15):
 
     logging.debug("Done finding recommendations for deck with general " + str(deck['commander']) + " (took %s time)" % str(datetime.datetime.now() - nn))
 
-    return newrecs, outrecs
+    if returnk:
+        return newrecs, outrecs, [ deck for _, deck, _, _ in topk ]
+    else:
+        return newrecs, outrecs
 
