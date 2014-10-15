@@ -219,8 +219,12 @@ def rec_deck_closeness(deck1, deck2):
     # Find how many non-land cards they have in common
     lenint = 0
     for c in set(deck1['cards']).intersection(set(deck2['cards'])):
-        if 'Land' in lookup_card(c)['types']:
+        try:
+            if 'Land' in lookup_card(c)['types']:
+                continue
+        except TypeError:
             continue
+
         lenint += 1.0
 
     # If they share the same commander, give the score a bit of a boost
