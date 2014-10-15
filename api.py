@@ -108,6 +108,8 @@ class API(object):
 
         r.set(hashkey, output_json, ex=60*60*24*3) # 3 days expiration
 
+        ckey = 'CACHE_COMMANDER_' + deck['commander'].replace(' ', '_')
+        r.delete(ckey)
 
         return output_json
 
