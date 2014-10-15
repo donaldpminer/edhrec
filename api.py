@@ -79,8 +79,30 @@ class API(object):
 
         newrecs, outrecs, topk = core.recommend(deck, returnk=True)
 
-        newrecs = [ { 'cardname' : cn, 'score' : sc, 'card_info' : core.lookup_card(cn)} for cn, sc in newrecs if sc > .3 ]
-        outrecs = [ { 'cardname' : cn, 'score' : sc, 'card_info' : core.lookup_card(cn)} for cn, sc in outrecs if sc > .5 ]
+        outnewrecs = []
+        for cn, sc in newrecs:
+            if sc < .3:
+                continue
+            try:
+                cd = { 'score' : sc, 'card_info' : {'name': core.lookup_card(cn)['name'], 'types': core.lookup_card(cn)['types']} }
+            except TypeError:
+                logging.warn('The card %s failed to do lookup card.' % cn)
+                continue
+            outnewrecs.append(cd)
+
+        outoutrecs = []
+        for cn, sc in outrecs:
+            if sc < .5:
+                continue
+            try:
+                cd = { 'score' : sc, 'card_info' : {'name': core.lookup_card(cn)['name'], 'types': core.lookup_card(cn)['types']} }
+            except TypeError:
+                logging.warn('The card %s failed to do lookup card.' % cn)
+                continue
+            outoutrecs.append(cd)
+ 
+        #newrecs = [ { 'score' : sc, 'card_info' : {'name': core.lookup_card(cn)['name'], 'types': core.lookup_card(cn)['types']} } for cn, sc in newrecs if sc > .3 ]
+        #outrecs = [ { 'score' : sc, 'card_info' : {'name': core.lookup_card(cn)['name'], 'types': core.lookup_card(cn)['types']} } for cn, sc in outrecs if sc > .5 ]
 
         deck['url'] = to
 
@@ -103,7 +125,7 @@ class API(object):
         kstats = deckstats.tally(topk)
         cstats = deckstats.get_commander_stats(deck['commander'])
 
-        output_json = json.dumps({'url' : to, 'recs' : newrecs, 'cuts' : outrecs, \
+        output_json = json.dumps({'url' : to, 'recs' : outnewrecs, 'cuts' : outoutrecs, \
                                   'stats' : stats, 'kstats' : kstats, 'cstats' : cstats})
 
         r.set(hashkey, output_json, ex=60*60*24*3) # 3 days expiration
@@ -142,14 +164,22 @@ class API(object):
         for deck in decks:
             for card in deck['cards']:
 
-                cards[card] = {'count' : 0, 'cardname' : card, 'card_info' : core.lookup_card(card)}
+                try:
+                    cards[card] = {'count' : 0, 'card_info' : {'name' : core.lookup_card(card)['name'], 'types' : core.lookup_card(card)['types'] } }
+                except TypeError:
+                    logging.warn("for some reason card %s could not be looked up, ignoring." % card)
+                    continue
+ 
 
         for deck in decks:
             for card in deck['cards']:
                 if card == commander: continue
                 if card in ['swamp', 'island', 'mountain', 'forest', 'plains']: continue
 
-                cards[card]['count'] += 1
+                try:
+                    cards[card]['count'] += 1
+                except KeyError:
+                    continue
 
         out['recs'] = [ pp for pp in sorted(cards.values(), key = (lambda x: -1 * x['count'])) if pp['count'] > 1 and pp['count'] > .1 * len(decks) ]
 
