@@ -18,3 +18,5 @@ for s in strs:
     r.rename(s, 'OLD_' + s)
     r.rename('DDD_' + s, s)
 
+
+    print 'Removed %d decks (%d - %d)' % (r.llen('OLD_' + s) - r.llen(s), r.llen('OLD_' + s), r.llen(s))
