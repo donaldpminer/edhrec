@@ -10,6 +10,8 @@ def tally(decks):
     curve = {'0':0, '1':0, '2':0, '3':0, '4':0, '5':0, '6':0, '7':0, '8+':0}
     colors= {u'Red' : 0, u'Blue' : 0, u'Green' : 0, u'White' : 0, u'Black' : 0}
 
+
+
     c = 0
     for deck in decks:
         c += 1

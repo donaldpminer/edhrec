@@ -8,7 +8,6 @@ import datetime
 import logging
 import deckstats
 
-logging.basicConfig(filename='api.log')
 
 COMMANDERS = sorted( core.sanitize_cardname(cn.decode('utf-8').strip().lower()) for cn in open('commanders.txt').readlines() )
 
@@ -39,7 +38,11 @@ class API(object):
     @cherrypy.expose
     def rec(self, to=None, ref=None):
         to = to[:500]
-        ref = to[:20]
+
+        if ref is None:
+           ref = "No ref"
+
+        ref = ref[:20]
 
         cherrypy.response.headers["Access-Control-Allow-Origin"] = "*"
 
@@ -246,12 +249,15 @@ cherrypy.config.update({'server.socket_host': '172.30.0.88',
  })
 
 
-cherrypy.tree.mount(API(), '/')
-cherrypy.engine.start()
+if __name__ == "__main__":
+    logging.basicConfig(filename='api.log')
 
-cherrypy.engine.block()
+    cherrypy.tree.mount(API(), '/')
+    cherrypy.engine.start()
+    cherrypy.engine.block()
 
-#cherrypy.quickstart(HelloWorld())
+
+
 
 
 

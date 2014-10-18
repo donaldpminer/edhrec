@@ -9,6 +9,7 @@ import urllib2
 import HTMLParser
 import hashlib
 import re
+import deckstats
 
 # this keeps all the code that is shared amongst most of the mdoules and future modules
 # it mostly contains redis storage and the recommendation engine stuff
@@ -29,7 +30,6 @@ _REDIS = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=2)
 USER_AGENT = "reddit.com/r/edh recommender by /u/orangeoctopus v2.0"
 
 
-
 ############# UTILITY FUNCTIONS ###############
 
 # Returns a redis instance. This checks to see if the connetion is open
@@ -45,6 +45,12 @@ def get_redis():
         _REDIS = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=2)
 
     return _REDIS
+
+CARDS = get_redis().hgetall('CARDS_JSON')
+for key in CARDS:
+    CARDS[key] = json.loads(CARDS[key])
+
+
 
 
 def hash_pyobj(python_obj):
@@ -72,8 +78,8 @@ def cap_cardname(cn):
 # looks up the cardname cn in the redis data store. It turns a nice dictionary object that maps the json object.
 def lookup_card(cn):
     try:
-        card_obj = json.loads(get_redis().hget('CARDS_JSON', sanitize_cardname(cn)))
-    except TypeError:
+        card_obj = CARDS[cn]
+    except KeyError:
         logging.warn('I couldn\'t find this card: ' + cn)
         return None
 
@@ -216,40 +222,90 @@ def get_recent_json():
 def rec_deck_closeness(deck1, deck2):
     r = get_redis()
 
-    # Find how many non-land cards they have in common
-    lenint = 0
-    for c in set(deck1['cards']).intersection(set(deck2['cards'])):
-        try:
-            if 'Land' in lookup_card(c)['types']:
-                continue
-        except TypeError:
-            continue
+    d1stat = deckstats.tally([deck1])
+    d2stat = deckstats.tally([deck2])
 
-        lenint += 1.0
+    minsum = 0
+    maxsum = 0
+    for d1t, d2t in zip(sorted(d1stat['types'].items()), sorted(d2stat['types'].items())):
+        minsum += min(d1t[1], d2t[1])
+        maxsum += max(d1t[1], d2t[1])
+
+    typescore = float(minsum) / maxsum
+
+
+    minsum = 0
+    maxsum = 0
+    for d1c, d2c in zip(sorted(d1stat['colors'].items()), sorted(d2stat['colors'].items())):
+        minsum += min(d1c[1], d2c[1])
+        maxsum += max(d1c[1], d2c[1])
+
+    colorscore = float(minsum) / maxsum
+
+
+    minsum = 0
+    maxsum = 0
+    for d1m, d2m in zip(sorted(d1stat['curve']), sorted(d2stat['curve'])):
+        minsum += min(d1m[1], d2m[1])
+        maxsum += max(d1m[1], d2m[1])    
+
+    curvescore = float(minsum) / maxsum
+
+
+    cards1 = set(deck1['cards'])
+    cards2 = set(deck2['cards'])
+    d1ind2 = 0
+
+    for c in cards1:
+        if c in cards2:
+            d1ind2 += 1 
+    d1ind2 /= float(len(cards1))
+
+
+    d2ind1 = 0
+    for c in cards2:
+        if c in cards1:
+            d2ind1 += 1
+    d2ind1 /= float(len(cards2))
+
+
+    # Find how many non-land cards they have in common
+    #lenint = 0
+    #for c in set(deck1['cards']).intersection(set(deck2['cards'])):
+    #    try:
+    #        if 'Land' in lookup_card(c)['types']:
+    #            continue
+    #    except TypeError:
+    #        continue
+
+    #    lenint += 1.0
 
     # If they share the same commander, give the score a bit of a boost
     # The rationale is that we want decks with the same commander first,
     #   with perhaps some help from other similar commanders if we can't
     #   find enough.
     if deck1['commander'] == deck2['commander']:
-        same_cmdr_bonus = 1.2
-    else:
         same_cmdr_bonus = 1.0
+    else:
+        same_cmdr_bonus = 0.0
 
     # Give a bit of a bonus if the decks are similar in age. If they are
     #  within 90 days of each other (roughly a new set is release every 90 days),
     #  it just gets a 1.0. Otherwise, it slowly degrades. 
     # The rationale here is that we don't want to be basing recommendations
     #  on decks that are 3 years old because they aren't up to date.
-    if deck1['date'] - deck2['date'] < 90:
-        newness_bonus = 1.0
-    else:
-        newness_bonus = .99 ** ((deck1['date'] - deck2['date']) / 366.)
+    #if deck1['date'] - deck2['date'] < 90:
+    #    newness_bonus = 1.0
+    #else:
+    #    newness_bonus = .99 ** ((deck1['date'] - deck2['date']) / 366.)
 
     # Compute the final score and return it!
-    return lenint * same_cmdr_bonus * newness_bonus
+    
+    weights = ((1.0, d1ind2), (1.0, d2ind1), (.15, same_cmdr_bonus), (.4, typescore), (.4, colorscore), (.1, curvescore))
 
+    out = sum(w * s for w, s in weights) / sum(w for w, s in weights)
 
+    return out
 # Determines if two decks are duplicates
 # You can adjust it to be more aggressive by making threshold higher.
 # Threshold is the number of cards the two decks have in common. 
