@@ -7,7 +7,7 @@ import tappedout
 import datetime
 import logging
 import deckstats
-
+import random
 
 COMMANDERS = sorted( core.sanitize_cardname(cn.decode('utf-8').strip().lower()) for cn in open('commanders.txt').readlines() )
 
@@ -168,7 +168,11 @@ class API(object):
             for card in deck['cards']:
 
                 try:
-                    cards[card] = {'count' : 0, 'card_info' : {'name' : core.lookup_card(card)['name'], 'types' : core.lookup_card(card)['types'] } }
+                    cards[card] = {'count' : 0, 'card_info' : {'name' : core.lookup_card(card)['name'], \
+                                                               'types' : core.lookup_card(card)['types'], \
+                                                               'colors' : core.lookup_card(card).get('colors', []), \
+                                                               'cmc' : core.lookup_card(card).get('cmc', 0) \
+                                       } }
                 except TypeError:
                     logging.warn("for some reason card %s could not be looked up, ignoring." % card)
                     continue
@@ -184,7 +188,8 @@ class API(object):
                 except KeyError:
                     continue
 
-        out['recs'] = [ pp for pp in sorted(cards.values(), key = (lambda x: -1 * x['count'])) if pp['count'] > 1 and pp['count'] > .1 * len(decks) ]
+        #out['recs'] = [ pp for pp in sorted(cards.values(), key = (lambda x: -1 * x['count'])) if pp['count'] > 1 and pp['count'] > .1 * len(decks) ]
+        out['recs'] = [ pp for pp in sorted(cards.values(), key = (lambda x: -1 * x['count'])) if pp['count'] > 1 ][:125]
 
         out['commander'] = core.cap_cardname(commander)
 
@@ -193,6 +198,58 @@ class API(object):
         r.set(ckey, json.dumps(out), ex=60*60*24*2) # 2 day cache
 
         return json.dumps(out)
+
+    @cherrypy.expose
+    def cmdrdeck(self, commander):
+        commander = commander[:50]
+        cherrypy.response.headers['Access-Control-Allow-Origin'] = "*"
+        cherrypy.response.headers['Content-Type'] = 'text/plain'
+
+        try:
+            cmdr_out = json.loads(self.cmdr(commander))
+        except ZeroDivisionError:
+            return "Unfortunately, there are not enough decks in my database for '%s', so I can't generate a list" % commander
+
+        colors = [ clr for clr, cnt in cmdr_out['stats']['colors'].items() if cnt > 0 ]
+
+        lands = cmdr_out['stats']['lands']
+        nonlands = cmdr_out['stats']['nonlands']
+        outdeck = []
+
+        landmap = {'Red' : 'Mountain', 'Blue' : 'Island', 'Black' : 'Swamp', 'White' : 'Plains', 'Green' : 'Forest' }
+        lands -= len(colors) 
+
+        for rec_dict in cmdr_out['recs']:
+             if 'Land' in rec_dict['card_info']['types'] and lands > 0:
+                 outdeck.append('1x ' + rec_dict['card_info']['name'])
+                 lands -= 1
+                 continue
+
+             if (not 'Land' in rec_dict['card_info']['types']) and nonlands > 0:
+                 outdeck.append('1x ' + rec_dict['card_info']['name'])
+                 nonlands -= 1
+                 continue
+             
+
+        # fill out the lands
+        total = sum( cnt for clr, cnt in cmdr_out['stats']['colors'].items() )
+        old_lands = lands
+        for color, count in cmdr_out['stats']['colors'].items():
+            if count == 0 : continue
+            num = int( float(count) / total * old_lands ) + 1
+            lands -= num
+            outdeck.append('%dx ' % num + landmap[color])
+
+        # tack on a card if we are at 99
+        if lands + nonlands > 2:
+            logging.warn('deck built had less than 98 cards... thats weird... %d' % len(outdeck))
+
+        while lands + nonlands > 0:
+            outdeck.append('1x ' + landmap[random.choice(colors)])
+            lands -= 1
+
+        return '\n'.join(outdeck)  
+
 
     @cherrypy.expose
     def recent(self):
@@ -243,13 +300,15 @@ class API(object):
         r.set(ckey, json.dumps(out), ex=60*60*3) # 3 hour cache
         return json.dumps(out)
 
-cherrypy.config.update({'server.socket_host': raw_input('your ip').strip(),
-                        'server.socket_port': 80,
-                        'environment': 'production'                      
- })
 
 
 if __name__ == "__main__":
+    cherrypy.config.update({'server.socket_host': raw_input('your ip').strip(),
+                        'server.socket_port': 80,
+                        'environment': 'production'
+ })
+
+
     logging.basicConfig(filename='api.log')
 
     cherrypy.tree.mount(API(), '/')

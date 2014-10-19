@@ -11,15 +11,20 @@ def tally(decks):
     colors= {u'Red' : 0, u'Blue' : 0, u'Green' : 0, u'White' : 0, u'Black' : 0}
 
 
-
+    nonland_counts = []
     c = 0
     for deck in decks:
         c += 1
+
+        nonlands = 0
         for card in deck['cards']:
             cd = core.lookup_card(card)
 
             if cd is None:
                 continue
+
+            if not 'Land' in cd['types']:
+                nonlands += 1
 
             for t in cd['types']:
                 if not t in  types.keys(): continue
@@ -35,7 +40,7 @@ def tally(decks):
                 if u'Land' in cd['types']: continue
                 for col in cd['colors']:
                     colors[col] += 1
-
+        nonland_counts.append(nonlands)
 
     for key in types:
         types[key] /= c
@@ -43,11 +48,14 @@ def tally(decks):
         curve[key] /= c
     for key in colors:
         colors[key] /= c
+    nonland_average = sum(nonland_counts) / len(nonland_counts)
 
     out = {}
     out['types'] = types
     out['curve'] = sorted(curve.items())
     out['colors'] = colors
+    out['nonlands'] = nonland_average
+    out['lands'] = 99 - nonland_average
     return out
 
 def get_global_stats():
