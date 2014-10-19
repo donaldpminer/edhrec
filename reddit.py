@@ -5,16 +5,17 @@ import logging
 import time
 import traceback
 import datetime
+import getpass
 
 TESTING = False
 
 PRAW = praw.Reddit(user_agent=core.USER_AGENT)
-PRAW.login(*open('login.txt').read().strip().split())
+PRAW.login(raw_input('user name: ').strip(), getpass.getpass().strip())
 
 BOT_NOTICE = """
 \n\nI'm a bot - visit me in /r/edhrec or [edhrec.com](http://edhrec.com)"""
 
-
+logging.basicConfig(filename='reddit.log')
 
 # The universal easy sleep command
 def sleep(t=5.0, x=1.0):
