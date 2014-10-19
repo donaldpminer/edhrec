@@ -243,7 +243,7 @@ class API(object):
         r.set(ckey, json.dumps(out), ex=60*60*3) # 3 hour cache
         return json.dumps(out)
 
-cherrypy.config.update({'server.socket_host': '172.30.0.88',
+cherrypy.config.update({'server.socket_host': raw_input('your ip').strip(),
                         'server.socket_port': 80,
                         'environment': 'production'                      
  })
