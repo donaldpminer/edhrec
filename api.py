@@ -221,12 +221,12 @@ class API(object):
 
         for rec_dict in cmdr_out['recs']:
              if 'Land' in rec_dict['card_info']['types'] and lands > 0:
-                 outdeck.append(rec_dict['card_info'])
+                 outdeck.append(rec_dict)
                  lands -= 1
                  continue
 
              if (not 'Land' in rec_dict['card_info']['types']) and nonlands > 0:
-                 outdeck.append(rec_dict['card_info'])
+                 outdeck.append(rec_dict)
                  nonlands -= 1
                  continue
              
@@ -253,6 +253,9 @@ class API(object):
         out = {}
         out['cards'] = outdeck
         out['basics'] = [ (landmap[color], count) for color, count in basics.items()] 
+        out['commander'] = cmdr_out['commander']
+
+        out['stats'] = deckstats.tally([ { 'cards' : [ core.sanitize_cardname(c['card_info']['name']) for c in out['cards'] ] }  ])
 
         return json.dumps(out)
 
