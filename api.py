@@ -160,6 +160,9 @@ class API(object):
 
         decks = [ deck for deck in core.get_decks(colors) if deck['commander'] == commander]
 
+        if len(decks) < 3:
+            return json.dumps({'error_code' : 'NOT_ENOUGH_DATA', 'message' : 'There are not enough decks in my database to generate recommendations for %s' % commander})
+
         out = {}
         out['numdecks'] = len(decks)
 
