@@ -233,7 +233,6 @@ class API(object):
                  nonlands -= 1
                  continue
              
-
         # fill out the lands
         total = sum( cnt for clr, cnt in cmdr_out['stats']['colors'].items() )
         old_lands = lands
@@ -278,7 +277,6 @@ class API(object):
         if r.exists(ckey):
             return r.get(ckey)
 
-
         out = {}
  
         w_counts = {}
@@ -311,6 +309,30 @@ class API(object):
         r.set(ckey, json.dumps(out), ex=60*60*3) # 3 hour cache
         return json.dumps(out)
 
+    @cherrypy.expose
+    def randomcmdr(self):
+        cherrypy.response.headers['Access-Control-Allow-Origin'] = "*"
+
+        r = core.get_redis()
+
+        ckey = 'CACHE_COMMANDER_COUNTS'
+        o = r.get(ckey)
+
+        if o is None:
+            alltime_counts = {}
+            for d in core.get_all_decks():
+                alltime_counts.setdefault(d['commander'], 0)
+                alltime_counts[d['commander']] += 1
+
+                options = [ cmdr for cmdr, cnt in alltime_counts.items() if cnt > 9 ]
+                r.set(ckey, json.dumps(options), ex=60*60*24*5) # 5 day cache
+
+        else:
+            options = json.loads(o)
+
+
+
+        return self.cmdr(random.choice(options))
 
 
 if __name__ == "__main__":
