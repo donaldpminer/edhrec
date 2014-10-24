@@ -64,12 +64,10 @@ class API(object):
             return json.dumps(None)
 
 
-
         deck = tappedout.get_deck(to)
 
         if deck['commander'] == 'jedit ojanen':
             raise ValueError('You input a deck without a valid commander. Please go back and add it to the web interface.')
-
 
         core.add_recent(to, \
                     core.cap_cardname(deck['commander']))
@@ -104,8 +102,6 @@ class API(object):
                 continue
             outoutrecs.append(cd)
  
-        #newrecs = [ { 'score' : sc, 'card_info' : {'name': core.lookup_card(cn)['name'], 'types': core.lookup_card(cn)['types']} } for cn, sc in newrecs if sc > .3 ]
-        #outrecs = [ { 'score' : sc, 'card_info' : {'name': core.lookup_card(cn)['name'], 'types': core.lookup_card(cn)['types']} } for cn, sc in outrecs if sc > .5 ]
 
         deck['url'] = to
 
@@ -139,7 +135,7 @@ class API(object):
         return output_json
 
     @cherrypy.expose
-    def cmdr(self, commander):
+    def cmdr(self, commander, nolog=False):
         commander = commander[:50]
 
         cherrypy.response.headers['Access-Control-Allow-Origin'] = "*"
@@ -151,6 +147,12 @@ class API(object):
         commander = closest_commander(commander)
 
         r = core.get_redis()
+
+        if not cherrypy.session.has_key('id'):
+            cherrypy.session['id'] = ''.join(random.choice('0123456789abcdefghijklmnopqrstuvwxyz') for i in range(8))
+
+        if not nolog:
+            r.sadd("SESSION_CMDRSEARCH_" +cherrypy.session['id'], commander)
 
         ckey = 'CACHE_COMMANDER_' + commander.replace(' ', '_')
         if r.exists(ckey):
@@ -332,13 +334,15 @@ class API(object):
 
 
 
-        return self.cmdr(random.choice(options))
+        return self.cmdr(random.choice(options), nolog=True)
 
 
 if __name__ == "__main__":
     cherrypy.config.update({'server.socket_host': raw_input('your ip').strip(),
                         'server.socket_port': 80,
-                        'environment': 'production'
+                        'environment': 'production',
+                        'tools.sessions.on': True,
+                        'tools.sessions.timeout' : 60 * 24 * 3 # keep sessions live for 3 days
  })
 
 
