@@ -8,6 +8,7 @@ import datetime
 import logging
 import deckstats
 import random
+import kmeans
 
 COMMANDERS = sorted( core.sanitize_cardname(cn.decode('utf-8').strip().lower()) for cn in open('commanders.txt').readlines() )
 
@@ -199,6 +200,10 @@ class API(object):
         out['commander'] = core.cap_cardname(commander)
 
         out['stats'] = deckstats.get_commander_stats(commander)
+
+        # kmeans output for subtopics
+        if len(decks) > 15:
+            out['archetypes'] = kmeans.kmeans(commander)
 
         r.set(ckey, json.dumps(out), ex=60*60*24*2) # 2 day cache
 
