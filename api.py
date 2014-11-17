@@ -324,7 +324,7 @@ class API(object):
                 alltime_counts.setdefault(d['commander'], 0)
                 alltime_counts[d['commander']] += 1
 
-                options = [ cmdr for cmdr, cnt in alltime_counts.items() if cnt > 9 ]
+                options = [ cmdr for cmdr, cnt in alltime_counts.items() if cnt > 4 ]
                 r.set(ckey, json.dumps(options), ex=60*60*24*5) # 5 day cache
 
         else:
