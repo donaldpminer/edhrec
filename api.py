@@ -67,6 +67,8 @@ class API(object):
 
         deck = tappedout.get_deck(to)
 
+        deck['scrapedate'] = str(datetime.datetime.now())
+
         if deck['commander'] == 'jedit ojanen':
             raise ValueError('You input a deck without a valid commander. Please go back and add it to the web interface.')
 
@@ -116,8 +118,6 @@ class API(object):
             deck['headref'] = cherrypy.request.headerMap['Referer']
         except AttributeError:
             pass
-
-        deck['scrapedate'] = str(datetime.datetime.now())
 
         core.add_deck(deck)
 
