@@ -42,11 +42,11 @@ def linkify(cn):
 # Go through recent submissions and try to find something I haven't seen before.
 # If there is something, post the recommendations. This is the default behavior
 #    that edhrec does to respond to posts.
-def seek_submissions(sublimit=200):
+def seek_submissions(sublimit=250):
     logging.debug('STARTING SUBMISSION SEEK AT ' + str(datetime.datetime.now()))
 
     # Scan edh and edhrec
-    subreddit = PRAW.get_subreddit('edhrec+edh').get_new(limit=sublimit)
+    subreddit = PRAW.get_subreddit('edhrec+edh+competitiveedh').get_new(limit=sublimit)
 
     rds = core.get_redis()
 
@@ -113,7 +113,7 @@ def seek_submissions(sublimit=200):
                 noncreatures.append((card, score))
 
         # build the output string
-        if str(submission.subreddit).lower() in ['edhrec', 'edh']:
+        if str(submission.subreddit).lower() in ['edhrec', 'edh', 'competitiveedh']:
             out_str = ['Other decks like yours use:\n\nCreatures | Non-creatures | Lands | Unique in your deck\n:--------|:---------|:---------|:--------']
 
             for i in range(16):
@@ -149,12 +149,14 @@ def seek_submissions(sublimit=200):
         elif str(submission.subreddit).lower() == 'edh':
             pass
 
-        elif str(submission.subreddit).lower() == 'competetiveedh':
+        elif str(submission.subreddit).lower() == 'competitiveedh':
             pass
 
         # Post the comment!
-        if not TESTING:
+        if not TESTING and str(submission.subreddit).lower() in ['edh','edhrec']:
             submission.add_comment('\n'.join(out_str))
+        else:
+            logging.debug("I'm not in edh or edhrec, so I'm just shooting blanks!")
 
         logging.debug('comment i think I posted:\n' + '\n'.join(out_str))
 
