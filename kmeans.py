@@ -53,7 +53,7 @@ def kmeans(cmdr, k=4):
 
     decks = numpy.array(decks, dtype=int)
 
-    kmc = sklearn.cluster.KMeans(n_clusters=k, init='k-means++', n_init=25, max_iter=300, tol=0.000001, precompute_distances=True, verbose=1, random_state=None, n_jobs=1)
+    kmc = sklearn.cluster.KMeans(n_clusters=k, init='k-means++', n_init=25, max_iter=300, tol=0.000001, precompute_distances=True, verbose=0, random_state=None, n_jobs=1)
 
     kmc.fit(decks)
 
