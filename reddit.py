@@ -75,6 +75,8 @@ def seek_submissions(sublimit=250):
         # Scrape it
         deck = tappedout.get_deck(url)
 
+        deck['scrapedate'] = str(datetime.datetime.now())
+
         if deck is None:
             logging.warning('Skipping this URL because something went wrong. (' + submission.title.encode('utf-8') +')')
             rds.sadd('SEEN', submission.id)
@@ -164,7 +166,6 @@ def seek_submissions(sublimit=250):
 
         deck['ref'] = 'reddit bot'
         deck['url'] = url
-        deck['scrapedate'] = str(datetime.datetime.now())
 
         core.add_recent(url, core.cap_cardname(deck['commander']), submission.url)
 

@@ -299,9 +299,27 @@ def rec_deck_closeness(deck1, deck2):
     #else:
     #    newness_bonus = .99 ** ((deck1['date'] - deck2['date']) / 366.)
 
+    if deck1.has_key('scrapedate') and deck2.has_key('scrapedate'):
+        d1date = datetime.datetime.strptime(deck1['scrapedate'], '%Y-%m-%d %H:%M:%S.%f')
+        d2date = datetime.datetime.strptime(deck2['scrapedate'], '%Y-%m-%d %H:%M:%S.%f')
+        ddelta = abs(d1date - d2date).days
+
+
+        if ddelta < 30: #if decks are within a month (super recent):
+            dscore = 1.0
+        if ddelta < 90: #if decks are within 90 days (most recent set):
+            dscore = .9
+        elif ddelta < 365: #if decks are within one year (most recent block):
+            dscore = .5
+        else:
+            dscore = 0.0
+    else:
+        dscore = 0.0
+
+
     # Compute the final score and return it!
     
-    weights = ((1.0, d1ind2), (1.0, d2ind1), (.15, same_cmdr_bonus), (.4, typescore), (.4, colorscore), (.1, curvescore))
+    weights = ((1.0, d1ind2), (1.0, d2ind1), (.15, same_cmdr_bonus), (.4, typescore), (.4, colorscore), (.1, curvescore), (.3, dscore))
 
     out = sum(w * s for w, s in weights) / sum(w for w, s in weights)
 
