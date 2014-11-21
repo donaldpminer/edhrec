@@ -38,13 +38,14 @@ class API(object):
 
     @cherrypy.expose
     def rec(self, to=None, ref=None):
-        to = to[:500]
+        to = to[:500].strip()
 
         if ref is None:
            ref = "No ref"
 
-        ref = ref[:20]
+        ref = ref[:20].strip()
 
+        cherrypy.response.headers['Content-Type']= 'application/json'
         cherrypy.response.headers["Access-Control-Allow-Origin"] = "*"
 
         if not 'tappedout.net/mtg-decks' in to:
@@ -139,6 +140,7 @@ class API(object):
     def cmdr(self, commander, nolog=False):
         commander = commander[:50]
 
+        cherrypy.response.headers['Content-Type']= 'application/json'
         cherrypy.response.headers['Access-Control-Allow-Origin'] = "*"
 
         r = core.get_redis()
@@ -213,7 +215,8 @@ class API(object):
     def cmdrdeck(self, commander):
         commander = commander[:50]
         cherrypy.response.headers['Access-Control-Allow-Origin'] = "*"
-        cherrypy.response.headers['Content-Type'] = 'text/plain'
+        cherrypy.response.headers['Content-Type']= 'application/json'
+
 
         try:
             cmdr_out = json.loads(self.cmdr(commander))
@@ -271,12 +274,14 @@ class API(object):
     @cherrypy.expose
     def recent(self):
         cherrypy.response.headers['Access-Control-Allow-Origin'] = "*"
+        cherrypy.response.headers['Content-Type']= 'application/json'
 
         return core.get_recent_json()
 
     @cherrypy.expose
     def stats(self):
         cherrypy.response.headers['Access-Control-Allow-Origin'] = "*"
+        cherrypy.response.headers['Content-Type']= 'application/json'
 
         r = core.get_redis()
 
@@ -319,6 +324,7 @@ class API(object):
     @cherrypy.expose
     def randomcmdr(self):
         cherrypy.response.headers['Access-Control-Allow-Origin'] = "*"
+        cherrypy.response.headers['Content-Type']= 'application/json'
 
         r = core.get_redis()
 
@@ -344,7 +350,7 @@ class API(object):
 
 if __name__ == "__main__":
     cherrypy.config.update({'server.socket_host': raw_input('your ip').strip(),
-                        'server.socket_port': 8889,
+                        'server.socket_port': 8080,
                         'environment': 'production',
                         'tools.sessions.on': True,
                         'tools.sessions.timeout' : 60 * 24 * 3 # keep sessions live for 3 days

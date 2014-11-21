@@ -319,7 +319,7 @@ def rec_deck_closeness(deck1, deck2):
 
     # Compute the final score and return it!
     
-    weights = ((1.0, d1ind2), (1.0, d2ind1), (.15, same_cmdr_bonus), (.4, typescore), (.4, colorscore), (.1, curvescore), (.3, dscore))
+    weights = ((1.0, d1ind2), (1.0, d2ind1), (.15, same_cmdr_bonus), (.35, typescore), (.35, colorscore), (.1, curvescore), (.1, dscore))
 
     out = sum(w * s for w, s in weights) / sum(w for w, s in weights)
 

@@ -6,7 +6,7 @@ import random
 
 def kmeans(cmdr, k=4):
 
-    random.seed(52485)
+#    random.seed(52485)
 
     cmdr = core.sanitize_cardname(cmdr)
 
