@@ -195,8 +195,21 @@ def add_recent(url_ref, commander, reddit_ref = None):
 
     out = {'url' : url_ref.strip('/'), 'commander' : commander}
 
+
     if reddit_ref is not None:
+        s = json.dumps(out)
+        r.lrem('RECENT', s, 0) # try to remove the non-reddit ref if it exists
         out['reddit'] = reddit_ref
+    else:
+        # see if there is already a reddit based one...
+        for it in get_redis().lrange('RECENT', 0, -1):
+            o = json.loads(it)
+            if o.has_key('reddit') and o['url'] == out['url']:
+                r.lrem('RECENT', json.dumps(out), 0)
+                out = o
+                r.lrem('RECENT', it, 0)
+
+                break
 
     s = json.dumps(out)
 
@@ -207,6 +220,8 @@ def add_recent(url_ref, commander, reddit_ref = None):
     r.ltrim('RECENT', 0, 99)
 
 def get_recent_json():
+
+
     return json.dumps(get_redis().lrange('RECENT', 0, -1))
 
 

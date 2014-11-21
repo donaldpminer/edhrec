@@ -349,8 +349,8 @@ class API(object):
 
 
 if __name__ == "__main__":
-    cherrypy.config.update({'server.socket_host': raw_input('your ip').strip(),
-                        'server.socket_port': 8080,
+    cherrypy.config.update({'server.socket_host': raw_input('your ip: ').strip(),
+                        'server.socket_port': int(raw_input('port to host on: ').strip()),
                         'environment': 'production',
                         'tools.sessions.on': True,
                         'tools.sessions.timeout' : 60 * 24 * 3 # keep sessions live for 3 days
