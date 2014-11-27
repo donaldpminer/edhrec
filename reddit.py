@@ -167,7 +167,7 @@ def seek_submissions(sublimit=250):
         deck['ref'] = 'reddit bot'
         deck['url'] = url
 
-        core.add_recent(url, core.cap_cardname(deck['commander']), submission.url)
+        core.add_recent(url, core.cap_cardname(deck['commander']), 'http://reddit.com/%s' % str(submission.id))
 
         # Keep track of the fact that I've now processed this deck.
         # It is important that this is last in case the scraping fails and
