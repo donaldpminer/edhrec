@@ -9,6 +9,7 @@ import logging
 import deckstats
 import random
 import kmeans
+import mtgsalvation
 
 COMMANDERS = sorted( core.sanitize_cardname(cn.decode('utf-8').strip().lower()) for cn in open('commanders.txt').readlines() )
 
@@ -48,8 +49,8 @@ class API(object):
         cherrypy.response.headers['Content-Type']= 'application/json'
         cherrypy.response.headers["Access-Control-Allow-Origin"] = "*"
 
-        if not 'tappedout.net/mtg-decks' in to:
-            raise ValueError('invalid deck url %s . it should look like http://tappedout.net/mtg-decks/xxxx' % to)
+        if not ('tappedout.net/mtg-decks' in to or 'mtgsalvation.com/forums/' in to):
+            raise ValueError('invalid deck url %s . it should look like http://tappedout.net/mtg-decks/xxxx or http://www.mtgsalvation.com/forums/xxxx' % to)
 
         ip = cherrypy.request.remote.ip
 
@@ -65,8 +66,11 @@ class API(object):
 	if tappedout is None:
             return json.dumps(None)
 
-
-        deck = tappedout.get_deck(to)
+        deck = None
+        if 'tappedout' in to:
+            deck = tappedout.get_deck(to)
+        elif 'mtgsalvation' in to:
+            deck = mtgsalvation.scrape_deck(to)
 
         deck['scrapedate'] = str(datetime.datetime.now())
 
@@ -127,7 +131,7 @@ class API(object):
         cstats = deckstats.get_commander_stats(deck['commander'])
 
         output_json = json.dumps({'url' : to, 'recs' : outnewrecs, 'cuts' : outoutrecs, \
-                                  'stats' : stats, 'kstats' : kstats, 'cstats' : cstats})
+                                  'stats' : stats, 'kstats' : kstats, 'cstats' : cstats}, indent=4)
 
         r.set(hashkey, output_json, ex=60*60*24*3) # 3 days expiration
 
