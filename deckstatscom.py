@@ -3,10 +3,13 @@ import core
 import logging
 import datetime
 import random
+import re
 
 test = 'http://deckstats.net/decks/16375/165876-marath-edh-/en'
 
 EXPORT_APPEND = '?export_dec=1'
+
+URL_PATTERN = re.compile('.*(https?://w?w?w?.?deckstats.net/decks/[0-9]+/[0-9]+-.*?/).*')
 
 def guess_commander(cards, text=''):
     text = text.lower().strip().replace('and', '').replace('or', '').replace('of', '').replace('the', '')
@@ -38,7 +41,7 @@ def guess_commander(cards, text=''):
         raise ValueError("There is no good commander option for this pool of cards")
 
     if len(candidates) == 1:
-        return cadidates[0]
+        return candidates[0]
 
     wordmatch = []
     for cardname in candidates:
