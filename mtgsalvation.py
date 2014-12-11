@@ -18,7 +18,7 @@ import logging
 
 
 def scrape_deck(url_str):
-    logging.debug('scraping a deck for %s' url_str)
+    logging.debug('scraping a deck for %s'% url_str)
 
     content = urllib2.urlopen(url_str).read()
     parsed = bs.BeautifulSoup(content)
