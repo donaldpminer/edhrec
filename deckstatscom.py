@@ -45,16 +45,18 @@ def guess_commander(cards, text=''):
 
     wordmatch = []
     for cardname in candidates:
-        cardname = ''.join( c for c in cardname if c.isalpha() or c == ' ' )
-        tokens = cardname.split()
-        c = len( [t for t in tokens if t in text.split()] )
+        ncardname = ''.join( c for c in cardname if c.isalpha() or c == ' ' )
+        tokens = [ k.rstrip('s') for k in ncardname.split() ]
+        texttokens = [ k.rstrip('s') for k in text.split() ]
+        logging.debug(str(tokens) + ' vs. ' + str(texttokens) + ' (word match)')
+        c = len( [t for t in tokens if t.rstrip('s') in texttokens] )
         wordmatch.append((c, cardname))
 
     wordmatch.sort(key = lambda x: (x[0], random.random()), reverse=True )
 
     logging.debug("There are multiple candidates, these are the scores: %s" % str(wordmatch))
 
-    return wordmatch[0]
+    return wordmatch[0][1]
 
 def scrapedeck(url_str):
     logging.debug('attempting to scrape the deckstats url: %s ' % url_str)
@@ -88,12 +90,10 @@ def scrapedeck(url_str):
         if not line[0] in '0123456789':
             raise ValueError("This isn't a valid line of the form '# Card Name': %s " % line)
 
-        cardname = core.sanitize_cardname(line.decode('utf-8').split(' ', 1)[1])
+        cardname = core.sanitize_cardname(line.split(' ', 1)[1])
         
 
         cards.add(cardname)
-
-
 
     commander = None
     if len(sideboard) == 1:
@@ -114,7 +114,6 @@ def scrapedeck(url_str):
     out['cards'] = sorted( cards )
     out['ref'] = 'deckstats'
 
-    guess_commander(out['cards'], text)
 
     return out
 

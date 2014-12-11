@@ -8,7 +8,7 @@ import datetime
 import getpass
 import deckstatscom
 
-TESTING = True
+TESTING = False
 
 PRAW = praw.Reddit(user_agent=core.USER_AGENT)
 PRAW.login(raw_input('user name: ').strip(), getpass.getpass().strip())

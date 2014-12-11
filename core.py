@@ -66,7 +66,7 @@ def strip_accents(s):
 # The official sanitization function. Any cardnames should be sent through this before
 #    hitting the data store or whatever.
 def sanitize_cardname(cn):
-    return HTMLParser.HTMLParser().unescape(strip_accents(cn.strip().lower()))
+    return ''.join(c for c in HTMLParser.HTMLParser().unescape(strip_accents(cn.strip().lower())).encode('utf-8') if ord(c) < 128)
 
 def date_from_str(dstr):
     return datetime.datetime(*[ int(p) for p in re.split('[ \.:-]', dstr)[:-1]])
@@ -77,10 +77,12 @@ def cap_cardname(cn):
 
 # looks up the cardname cn in the redis data store. It turns a nice dictionary object that maps the json object.
 def lookup_card(cn):
+    cn = sanitize_cardname(cn)
+
     try:
-        card_obj = CARDS[cn]
+        card_obj = CARDS[str(cn)]
     except KeyError:
-        logging.warn('I couldn\'t find this card: ' + cn)
+        logging.warn('I couldn\'t find this card: ' + str(cn))
         return None
 
     return card_obj
@@ -90,7 +92,7 @@ def color_identity(cn):
     card = lookup_card(cn)
 
     if card is None:
-        raise ValueError('Card doesnt exist ' + cn)
+        raise ValueError('Card doesnt exist ' + str(cn))
 
     colors = { '{W}' : 'WHITE' , '{B}' : 'BLACK' , '{U}' : 'BLUE', '{R}' : 'RED', '{G}' : 'GREEN' }
     oc = set()
