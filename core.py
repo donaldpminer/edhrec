@@ -367,7 +367,7 @@ def decks_are_dups(deck1, deck2, threshold = .7):
 
 # For a list of decks, deduplicate ones that are near duplicates of others in the list
 def dedup_decks(decks, threshold = .7):
-    sdecks = sorted( decks, key= lambda x: int(x['date']), reverse=True )
+    sdecks = sorted( decks, key= lambda x: int(x['date'] if x.has_key('date') else 0), reverse=True )
 
     badlist = []
     for (i1, d1), (i2, d2) in itertools.combinations(enumerate(sdecks), 2):

@@ -300,6 +300,10 @@ class API(object):
         for d in core.get_all_decks():
             if not d.has_key('scrapedate'): continue
 
+            try:
+                if d['scrapedate'] < '2014-11-28 10:52:53.525961' and d['scrapedate'] > '2014-11-28 03:52:53.525961' and d['ref'] == 'mtgsalvation': continue    # this is to prevent the mass load I did from impacting stats
+            except KeyError: pass
+
             datedelta = (datetime.datetime.now() - core.date_from_str(d['scrapedate'])).days
 
             if datedelta <= 30:

@@ -5,6 +5,8 @@ do
   echo "starting tasks " `date`
   python dedup.py
 
+  python mtgsalvation.py
+
   sh backup.sh staging.edhrec.com
 
   echo "done with tasks" `date`

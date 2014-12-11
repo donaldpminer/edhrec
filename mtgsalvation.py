@@ -15,10 +15,10 @@ import json
 import core
 import datetime
 import logging
-
+import time
 
 def scrape_deck(url_str):
-    logging.debug('scraping a deck for %s' url_str)
+    logging.debug('scraping a deck for %s' % url_str)
 
     content = urllib2.urlopen(url_str).read()
     parsed = bs.BeautifulSoup(content)
@@ -50,7 +50,9 @@ def scrape_deck(url_str):
         raise ValueError("I couldn't find a deck in this post")
 
     out = {}
+    out['url'] = url_str
     out['mtgsalvation'] = url_str
+    out['date'] = datetime.datetime.now().toordinal()
     out['scrapedate'] = str(datetime.datetime.now())
     out['commander'] = deck[0]
     out['cards'] = sorted(deck)
@@ -59,10 +61,10 @@ def scrape_deck(url_str):
     return out
 
 
-def frontpage(pages=1):
-    url = 'http://www.mtgsalvation.com/forums/the-game/commander-edh/multiplayer-commander-decklists?page=%d' % pages
+def frontpage(page=1):
+    url = 'http://www.mtgsalvation.com/forums/the-game/commander-edh/multiplayer-commander-decklists?page=%d' % page
 
-    logging.debug('Looking at page %d of the multiplayer decklists' % pages)
+    logging.debug('Looking at page %d of the multiplayer decklists' % page)
 
     content = urllib2.urlopen(url).read()
     parsed = bs.BeautifulSoup(content)
@@ -84,12 +86,17 @@ def frontpage(pages=1):
 
         decklinks.append(href)
 
-    # recursively call the next page
-    return ([] if pages == 1 else frontpage(pages - 1)) + decklinks
+    return decklinks
 
-if __name__ == '__main__':
+def frontpages(startpage=1, endpage=100):
+    outlinks = []
+    for i in range(endpage, startpage, -1):
+        for ol in frontpage(i):
+            yield ol
 
-    for link in frontpage(pages=5):
+
+def onetimescrape():
+    for link in frontpages(startpage=1, endpage=100):
         try:
             url = 'http://www.mtgsalvation.com' + link
 
@@ -97,7 +104,29 @@ if __name__ == '__main__':
             if not core.get_redis().get(cachekey) is None:
                 continue
 
-            core.get_redis().set(cachekey, str(datetime.datetime.now()), ex=60*60*24*3) # 3 day cache)
+            core.get_redis().set(cachekey, str(datetime.datetime.now()), ex=60*60*4) # 4 hour cache
+
+            deck = scrape_deck(url)
+            core.add_deck(deck)
+            #core.add_recent(url, core.cap_cardname(deck['commander']))
+
+            logging.debug("added a deck, yay! %s" % deck['commander'])
+
+        except Exception, e:
+            logging.debug('for "%s" : %s' % (url, e))
+
+
+if __name__ == '__main__':
+
+    for link in frontpage(page=1):
+        try:
+            url = 'http://www.mtgsalvation.com' + link
+
+            cachekey = 'CACHE_MTGSALVATION_%s' % url
+            if not core.get_redis().get(cachekey) is None:
+                continue
+
+            core.get_redis().set(cachekey, str(datetime.datetime.now()), ex=60*60*24*3) # 3 day cache
 
             deck = scrape_deck(url)
             core.add_deck(deck)

@@ -13,7 +13,7 @@ import HTMLParser
 #  is URL_PATTERN and get_deck. So, future scraper modules should expose these methods and then
 #  we'll add them to some sort of list in reddit.py.
 
-URL_PATTERN = re.compile('.*(http://tappedout.net/mtg-decks/[a-z0-9-]+).*')
+URL_PATTERN = re.compile('.*(http://tappedout.net/mtg-decks/[a-zA-Z0-9-]+).*')
 
 # Given a tappedout URL, get me the tuple:
 #    (commander, deck contents (cards), color identity, the date the deck was updated)
