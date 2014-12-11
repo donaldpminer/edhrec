@@ -6,8 +6,9 @@ import time
 import traceback
 import datetime
 import getpass
+import deckstatscom
 
-TESTING = False
+TESTING = True
 
 PRAW = praw.Reddit(user_agent=core.USER_AGENT)
 PRAW.login(raw_input('user name: ').strip(), getpass.getpass().strip())
@@ -23,13 +24,11 @@ def sleep(t=5.0, x=1.0):
 
 # Given a submission, try to find the tappedout.net URL.
 # If there is one, return it. Otherwise, return None.
-def find_tappedout_url(submission):
+def find_url(submission):
     op_text = submission.selftext.lower().replace('\n', ' ').strip()
 
-    url = tappedout.URL_PATTERN.match(op_text)
-
-    if url is None:
-        url = tappedout.URL_PATTERN.match(submission.url)
+    url = tappedout.URL_PATTERN.match(op_text) or tappedout.URL_PATTERN.match(submission.url) \
+            or deckstatscom.URL_PATTERN.match(op_text) or deckstatscom.URL_PATTERN.match(submission.url)  
 
     if url is None:
         return None
@@ -59,7 +58,7 @@ def seek_submissions(sublimit=250):
         logging.debug("Scanning " + str(submission.id) + " - " + str(submission.title.encode('utf-8')))
  
         # Fetch the tappedout url
-        url = find_tappedout_url(submission)
+        url = find_url(submission)
 
         # If there was no tappedout URL, then let's pass over this one.
         if url is None:
@@ -73,7 +72,12 @@ def seek_submissions(sublimit=250):
         logging.debug("I found a URL to scrape: " + str(url))
 
         # Scrape it
-        deck = tappedout.get_deck(url)
+        if 'tappedout.net' in url:
+            deck = tappedout.get_deck(url)
+        elif 'deckstats.net' in url:
+            deck = deckstatscom.scrapedeck(url)
+        else:
+            logging.error("something went seriously wrong. '%s' doesn't contain deckstats or tappedout in it" % url)
 
         deck['scrapedate'] = str(datetime.datetime.now())
 
