@@ -1,5 +1,6 @@
 import core
 import tappedout
+import gracefulstats
 import praw
 import logging
 import time
@@ -29,7 +30,8 @@ def find_url(submission):
 
     url = tappedout.URL_PATTERN.match(op_text) or tappedout.URL_PATTERN.match(submission.url) \
             or deckstatscom.URL_PATTERN.match(op_text) or deckstatscom.URL_PATTERN.match(submission.url) \
-            or deckstatscom.URL_PATTERN2.match(op_text) or deckstatscom.URL_PATTERN2.match(submission.url)  
+            or deckstatscom.URL_PATTERN2.match(op_text) or deckstatscom.URL_PATTERN2.match(submission.url) \
+            or gracefulstats.URL_PATTERN.match(op_text) or gracefulstats.URL_PATTERN.match(submission.url)  
 
     if url is None:
         return None
@@ -77,8 +79,11 @@ def seek_submissions(sublimit=250):
             deck = tappedout.get_deck(url)
         elif 'deckstats.net' in url:
             deck = deckstatscom.scrapedeck(url)
+        elif 'gracefulstats.com' in url:
+            deck = gracefulstats.scrapedeck(url)
         else:
             logging.error("something went seriously wrong. '%s' doesn't contain deckstats or tappedout in it" % url)
+            raise ValueError("bad url")
 
         deck['scrapedate'] = str(datetime.datetime.now())
 
