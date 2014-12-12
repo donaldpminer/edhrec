@@ -5,11 +5,12 @@ import datetime
 import random
 import re
 
-test = 'http://deckstats.net/decks/16375/165876-marath-edh-/en'
 
 EXPORT_APPEND = '?export_dec=1'
 
 URL_PATTERN = re.compile('.*(https?://w?w?w?.?deckstats.net/decks/[0-9]+/[0-9]+-.*?/).*')
+URL_PATTERN2 = re.compile('.*(https?://w?w?w?.?deckstats.net/deck-[0-9]+-[0-9a-f]+.html).*')
+
 
 def guess_commander(cards, text=''):
     text = text.lower().strip().replace('and', '').replace('or', '').replace('of', '').replace('the', '')
@@ -52,7 +53,7 @@ def guess_commander(cards, text=''):
         c = len( [t for t in tokens if t.rstrip('s') in texttokens] )
         wordmatch.append((c, cardname))
 
-    wordmatch.sort(key = lambda x: (x[0], random.random()), reverse=True )
+    wordmatch.sort(reverse=True)
 
     logging.debug("There are multiple candidates, these are the scores: %s" % str(wordmatch))
 

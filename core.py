@@ -66,7 +66,11 @@ def strip_accents(s):
 # The official sanitization function. Any cardnames should be sent through this before
 #    hitting the data store or whatever.
 def sanitize_cardname(cn):
-    return ''.join(c for c in HTMLParser.HTMLParser().unescape(strip_accents(cn.strip().lower())).encode('utf-8') if ord(c) < 128)
+    cn = u_to_str(cn)
+    return HTMLParser.HTMLParser().unescape(strip_accents(cn.strip().lower())).encode('utf-8')
+
+def u_to_str(ustr):
+    return ''.join(c for c in ustr if ord(c) < 128).encode('utf-8')
 
 def date_from_str(dstr):
     return datetime.datetime(*[ int(p) for p in re.split('[ \.:-]', dstr)[:-1]])

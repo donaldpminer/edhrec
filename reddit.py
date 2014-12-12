@@ -28,7 +28,8 @@ def find_url(submission):
     op_text = submission.selftext.lower().replace('\n', ' ').strip()
 
     url = tappedout.URL_PATTERN.match(op_text) or tappedout.URL_PATTERN.match(submission.url) \
-            or deckstatscom.URL_PATTERN.match(op_text) or deckstatscom.URL_PATTERN.match(submission.url)  
+            or deckstatscom.URL_PATTERN.match(op_text) or deckstatscom.URL_PATTERN.match(submission.url) \
+            or deckstatscom.URL_PATTERN2.match(op_text) or deckstatscom.URL_PATTERN2.match(submission.url)  
 
     if url is None:
         return None
@@ -159,10 +160,10 @@ def seek_submissions(sublimit=250):
             pass
 
         # Post the comment!
-        if not TESTING and str(submission.subreddit).lower() in ['edh','edhrec']:
+        if not TESTING and str(submission.subreddit).lower() in ['edh','edhrec'] and not 'noedhrec' in str(submission.selftext).lower():
             submission.add_comment('\n'.join(out_str))
         else:
-            logging.debug("I'm not in edh or edhrec, so I'm just shooting blanks!")
+            logging.debug("I'm not in edh or edhrec, so I'm just shooting blanks! (noedhrec is here: %s)" % str('noedhrec' in str(submission.selftext).lower()))
 
         logging.debug('comment i think I posted:\n' + '\n'.join(out_str))
 

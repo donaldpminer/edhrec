@@ -50,7 +50,7 @@ class API(object):
         cherrypy.response.headers['Content-Type']= 'application/json'
         cherrypy.response.headers["Access-Control-Allow-Origin"] = "*"
 
-        if not ('tappedout.net/mtg-decks' in to or 'mtgsalvation.com/forums/' in to or 'deckstats.net/decks' in to):
+        if not ('tappedout.net/mtg-decks' in to or 'mtgsalvation.com/forums/' in to or 'deckstats.net/deck' in to):
             raise ValueError('invalid deck url %s . it should look like http://tappedout.net/mtg-decks/xxxx or http://www.mtgsalvation.com/forums/xxxx or http://deckstats.net/decks/xxxx/xxxx' % to)
 
         ip = cherrypy.request.remote.ip
