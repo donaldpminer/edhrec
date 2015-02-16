@@ -2,7 +2,6 @@
 # go through AllCards.json and print out a list of all of the legendary creatures
 
 import json
-import core
 
 for card, conts in json.load(open('AllCards.json')).items():
     if not conts.has_key(u'types'): continue
